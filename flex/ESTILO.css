@@ -1,0 +1,87 @@
+* {
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  background: #f2f2f2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.card {
+  background: white;
+  width: 350px;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  background: #ddd;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  background: #3b9ddd;
+  border-radius: 50%;
+  margin-right: 15px;
+}
+
+.info h2 {
+  margin: 0;
+}
+
+.info p {
+  margin: 5px 0 0;
+}
+
+.description {
+  margin: 20px 0;
+  line-height: 1.4;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-around;
+  margin: 20px 0;
+}
+
+.stats div {
+  text-align: center;
+}
+
+.stats span {
+  display: block;
+  font-size: 14px;
+}
+
+
+.buttons {
+  display: flex;
+  gap: 15px;
+}
+
+button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.follow {
+  background: #3b9ddd;
+  color: white;
+}
+
+.message {
+  background: #eee;
+}
