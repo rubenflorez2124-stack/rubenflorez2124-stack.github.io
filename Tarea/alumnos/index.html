@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valenbisi</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+    <link rel="stylesheet" href="../alumnos/css/style.css">
+</head>
+
+<body>
+    <h1>ValenBisi</h1>
+    <div class="main-container">
+        <div class="button-container">
+            <button id="getStations">Obtener estaciones</button>
+        </div>
+        <div class="flex-content">
+            <div id="results"></div>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script>
+        const url = "https://geoportal.valencia.es/server/rest/services/OPENDATA/Trafico/MapServer/228/query?where=1=1&outFields=*&f=json";
+
+        proj4.defs('EPSG:25830', '+proj=utm +zone=30 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+
+        let map = null;
+        let results = document.getElementById('results');
+
+        let getStationsButton = document.getElementById('getStations');
+        getStationsButton.addEventListener('click', getStations);
+
+        function getStations() {
+            console.log("Cargando estaciones...");
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+
+                    results.innerHTML = '';
+
+                    let table = document.createElement('table');
+
+                    let tr = document.createElement('tr');
+                    tr.className = "title";
+                    tr.innerHTML = `
+                        <td><b>Dirección</b></td>
+                        <td><b>Número</b></td>
+                        <td><b>Abierto</b></td>
+                        <td><b>Disponibles</b></td>
+                        <td><b>Libres</b></td>
+                        <td><b>Total</b></td>
+                        <td><b>Actualizado</b></td>
+                        <td><b>Coordenadas</b></td>`;
+
+                    table.appendChild(tr);
+
+                    // BUCLE COMPLETO
+                    data.features.forEach(item => {
+                        const attr = item.attributes;
+
+                        let fila = document.createElement('tr');
+
+                        fila.innerHTML = `
+                            <td>${attr.address}</td>
+                            <td>${attr.number}</td>
+                            <td>${attr.open === "T" ? "Abierto" : "Cerrado"}</td>
+                            <td>${attr.available}</td>
+                            <td>${attr.free}</td>
+                            <td>${attr.total}</td>
+                            <td>${attr.updated_at}</td>
+                            <td>${item.geometry.x}, ${item.geometry.y}</td>
+                        `;
+
+                        table.appendChild(fila);
+                    });
+
+                    results.appendChild(table);
+
+                    loadMap(data);
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        function convertToGeoJSON(datosOriginales) {
+            return {
+                type: "FeatureCollection",
+                features: datosOriginales.features.map(item => {
+
+                    const [lon, lat] = proj4('EPSG:25830', 'EPSG:4326', [
+                        item.geometry.x,
+                        item.geometry.y
+                    ]);
+
+                    return {
+                        type: "Feature",
+                        geometry: {
+                            type: "Point",
+                            coordinates: [lon, lat]
+                        },
+                        properties: {
+                            id: item.attributes.number,
+                            direccion: item.attributes.address,
+                            disponibles: item.attributes.available,
+                            libres: item.attributes.free,
+                            total: item.attributes.total,
+                            actualizado: item.attributes.updated_at,
+                            estado: item.attributes.open === "T" ? "Abierto" : "Cerrado"
+                        }
+                    };
+                })
+            };
+        }
+
+        function loadMap(json) {
+            const geoJSONResultado = convertToGeoJSON(json);
+
+            let inicioLon = geoJSONResultado.features[0].geometry.coordinates[0];
+            let inicioLat = geoJSONResultado.features[0].geometry.coordinates[1];
+
+            if (map !== null) {
+                map.remove();
+                map = null;
+            }
+
+            map = L.map('map').setView([inicioLat, inicioLon], 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            L.geoJSON(geoJSONResultado, {
+                pointToLayer: (feature, latlng) => {
+                    return L.circleMarker(latlng, {
+                        radius: 6,
+                        color: feature.properties.disponibles > 0 ? 'green' : 'red',
+                        weight: 1,
+                        fillOpacity: 0.8
+                    });
+                },
+                onEachFeature: (feature, layer) => {
+                    const props = feature.properties;
+
+                    const contenidoPopup = `
+                        <div>
+                            <h4>${props.direccion}</h4>
+                            <ul>
+                                <li>ID: ${props.id}</li>
+                                <li>Actualizado: ${props.actualizado}</li>
+                                <li>Disponibles: ${props.disponibles}</li>
+                                <li>Libres: ${props.libres}</li>
+                                <li>Total: ${props.total}</li>
+                                <li>Estado: ${props.estado}</li>
+                            </ul>
+                        </div>
+                    `;
+
+                    layer.bindPopup(contenidoPopup);
+                }
+            }).addTo(map);
+        }
+
+        getStations();
+        setInterval(getStations, 60000);
+    </script>
+</body>
+
+</html>
